@@ -11,7 +11,7 @@ class LocalVaultApp:
         self.root.geometry("560x420")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
-        self.root.option_add("*Font", "Helvetica 11")
+        self.root.option_add("*Font", "{SF Pro Display} 11")
 
         # === Clave maestra ===
         self.master_key = simpledialog.askstring(
@@ -38,7 +38,7 @@ class LocalVaultApp:
         tk.Label(
             container,
             text="Gestor de Contraseñas",
-            fg="#00bcd4",
+            fg="#ffffff",
             bg="#1e1e1e",
             font=("SF Pro Display", 18, "bold"),
             anchor="w"
@@ -55,9 +55,12 @@ class LocalVaultApp:
         tk.Button(
             container,
             text="Agregar Contraseña",
-            bg="#00bcd4",
-            fg="white",
-            relief="flat",
+            bg="#1e1e1e",
+            fg="#1e1e1e",
+            relief="solid",
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground="#444444",
             font=("SF Pro Display", 12, "bold"),
             height=2,
             command=self.add_password
@@ -66,7 +69,6 @@ class LocalVaultApp:
         self.refresh_list()
 
     def refresh_list(self):
-        # Limpiar lista
         for widget in self.list_container.winfo_children():
             widget.destroy()
 
@@ -92,25 +94,32 @@ class LocalVaultApp:
                 anchor="w"
             ).pack(side="left", padx=(8, 0), fill="x", expand=True)
 
-            # Botones "View" y "Delete"
-            tk.Button(
+            # Botones tipo link (sin fondo, solo texto)
+            view_btn = tk.Button(
                 row,
                 text="View",
                 bg="#2a2a2a",
-                fg="#00bcd4",
+                fg="#0f52ba",
                 relief="flat",
                 cursor="hand2",
+                activeforeground="#1c74ff",
+                activebackground="#2a2a2a",
                 command=lambda n=name: self.view_password(n)
-            ).pack(side="right", padx=(0, 10))
-            tk.Button(
+            )
+            view_btn.pack(side="right", padx=(0, 10))
+
+            del_btn = tk.Button(
                 row,
                 text="Delete",
                 bg="#2a2a2a",
-                fg="#f44336",
+                fg="#0f52ba",
                 relief="flat",
                 cursor="hand2",
+                activeforeground="#ff5252",
+                activebackground="#2a2a2a",
                 command=lambda n=name: self.delete_password(n)
-            ).pack(side="right", padx=(0, 5))
+            )
+            del_btn.pack(side="right", padx=(0, 5))
 
     def add_password(self):
         name = simpledialog.askstring("Servicio", "Nombre del servicio:")
@@ -148,28 +157,29 @@ class LocalVaultApp:
             messagebox.showerror("Error", "Elemento no encontrado.")
             return
 
-        # === Modal de detalles ===
+        # === Modal ===
         modal = tk.Toplevel(self.root)
         modal.title(f"{name}")
         modal.geometry("460x280")
         modal.configure(bg="#1e1e1e", padx=20, pady=20)
         modal.resizable(False, False)
 
-        tk.Label(modal, text=name, fg="#00bcd4", bg="#1e1e1e",
+        tk.Label(modal, text=name, fg="#ffffff", bg="#1e1e1e",
                  font=("SF Pro Display", 16, "bold"), anchor="w").pack(fill="x", pady=(0, 15))
 
         info = f"Usuario: {item.get('user', '—')}\n\n" \
                f"Contraseña: {item.get('password', '—')}\n\n" \
                f"Descripción: {item.get('description', '—')}"
-        tk.Label(modal, text=info, fg="white", bg="#1e1e1e",
+        tk.Label(modal, text=info, fg="#ffffff", bg="#1e1e1e",
                  justify="left", anchor="w", font=("SF Pro Display", 12)).pack(fill="x", pady=(0, 20))
 
         def copy_now():
             pyperclip.copy(item.get('password', ''))
             messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
 
-        tk.Button(modal, text="Copiar al Portapapeles", bg="#00bcd4", fg="white",
-                  font=("SF Pro Display", 12, "bold"), relief="flat", height=2,
+        tk.Button(modal, text="Copiar al Portapapeles", bg="#1e1e1e", fg="#1e1e1e",
+                  relief="solid", borderwidth=1, highlightthickness=1, highlightbackground="#444444",
+                  font=("SF Pro Display", 12, "bold"), height=2,
                   command=copy_now).pack(fill="x", pady=(10, 0))
 
         modal.transient(self.root)
