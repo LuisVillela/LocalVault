@@ -1,121 +1,87 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from src.encryptor import encrypt_file
-from src.decryptor import decrypt_file
-import os
+from tkinter import simpledialog, messagebox
+from src.vault_manager import load_vault, save_vault
 
 class LocalVaultApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("LocalVault")
-        self.root.geometry("420x340")
+        self.root.title("LocalVault – Password Edition")
+        self.root.geometry("460x380")
         self.root.configure(bg="#1e1e1e")
-        self.root.resizable(False, False)
 
-        self.file_path = None
-
-        # ====== Título ======
-        tk.Label(
-            root,
-            text="LocalVault",
-            fg="#00bcd4",
-            bg="#1e1e1e",
-            font=("SF Pro Display", 18, "bold")
-        ).pack(pady=(25, 10))
-
-        # ====== Archivo seleccionado ======
-        self.path_label = tk.Label(
-            root,
-            text="Ningún archivo seleccionado",
-            fg="white",
-            bg="#1e1e1e",
-            font=("SF Pro Display", 10)
+        # ===== Clave maestra =====
+        self.master_password = simpledialog.askstring(
+            "Clave Maestra", "Introduce tu clave maestra:", show="*"
         )
-        self.path_label.pack(pady=5)
+        if not self.master_password:
+            messagebox.showerror("Error", "Se requiere una clave maestra.")
+            root.destroy()
+            return
 
-        tk.Button(
-            root,
-            text="Seleccionar archivo",
-            command=self.select_file,
-            bg="#00bcd4",
-            fg="white",
-            relief="flat",
-            width=20,
-            height=1
-        ).pack(pady=8)
+        # ===== Cargar o crear vault =====
+        try:
+            self.vault = load_vault(self.master_password)
+        except Exception:
+            messagebox.showerror("Error", "Clave incorrecta o vault dañado.")
+            root.destroy()
+            return
 
-        # ====== Contraseña ======
+        # ===== UI Principal =====
         tk.Label(
-            root,
-            text="Contraseña:",
-            fg="white",
-            bg="#1e1e1e",
-            font=("SF Pro Display", 10)
-        ).pack(pady=(10, 0))
+            root, text="Gestor de Contraseñas", fg="#00bcd4",
+            bg="#1e1e1e", font=("SF Pro Display", 18, "bold")
+        ).pack(pady=(20, 10))
 
-        self.password_entry = tk.Entry(root, show="*", width=30)
-        self.password_entry.pack(pady=5)
+        self.listbox = tk.Listbox(root, bg="#2b2b2b", fg="white", width=50, height=10)
+        self.listbox.pack(pady=10)
+        self.update_listbox()
 
-        # ====== Botones ======
-        tk.Button(
-            root,
-            text="Encriptar",
-            command=self.encrypt_action,
-            bg="#4caf50",
-            fg="white",
-            relief="flat",
-            width=15,
-            height=1
-        ).pack(pady=10)
+        tk.Button(root, text="Agregar Contraseña", command=self.add_password,
+                  bg="#00bcd4", fg="white", relief="flat", width=20).pack(pady=5)
 
-        tk.Button(
-            root,
-            text="Desencriptar",
-            command=self.decrypt_action,
-            bg="#f44336",
-            fg="white",
-            relief="flat",
-            width=15,
-            height=1
-        ).pack(pady=5)
+        tk.Button(root, text="Ver Contraseña", command=self.view_password,
+                  bg="#4caf50", fg="white", relief="flat", width=20).pack(pady=5)
 
-    # ====== Funciones de la interfaz ======
-    def select_file(self):
-        file_path = filedialog.askopenfilename()
-        if file_path:
-            self.file_path = file_path
-            self.path_label.config(text=os.path.basename(file_path))
+    def update_listbox(self):
+        self.listbox.delete(0, tk.END)
+        for key in self.vault.keys():
+            self.listbox.insert(tk.END, f"🔒 {key}")
 
-    def encrypt_action(self):
-        if not self.file_path:
-            messagebox.showerror("Error", "Selecciona un archivo primero.")
+    def add_password(self):
+        name = simpledialog.askstring("Servicio", "Nombre del servicio:")
+        user = simpledialog.askstring("Usuario", "Usuario o correo:")
+        password = simpledialog.askstring("Contraseña", "Contraseña:", show="*")
+        description = simpledialog.askstring("Descripción", "Descripción breve:")
+
+        if not name or not password:
+            messagebox.showerror("Error", "Campos obligatorios.")
             return
-        password = self.password_entry.get()
-        if not password:
-            messagebox.showerror("Error", "Introduce una contraseña.")
-            return
-        try:
-            out = encrypt_file(self.file_path, password)
-            messagebox.showinfo("Éxito", f"Archivo encriptado:\n{out}")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
 
-    def decrypt_action(self):
-        if not self.file_path:
-            messagebox.showerror("Error", "Selecciona un archivo primero.")
-            return
-        password = self.password_entry.get()
-        if not password:
-            messagebox.showerror("Error", "Introduce una contraseña.")
-            return
-        try:
-            out = decrypt_file(self.file_path, password)
-            messagebox.showinfo("Éxito", f"Archivo desencriptado:\n{out}")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
+        self.vault[name] = {
+            "usuario": user,
+            "password": password,
+            "descripcion": description
+        }
+        save_vault(self.vault, self.master_password)
+        self.update_listbox()
+        messagebox.showinfo("Éxito", f"Contraseña para {name} guardada.")
 
+    def view_password(self):
+        selection = self.listbox.curselection()
+        if not selection:
+            messagebox.showerror("Error", "Selecciona un servicio.")
+            return
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = LocalVaultApp(root)
-    root.mainloop()
+        name = self.listbox.get(selection[0]).replace("🔒 ", "")
+        item = self.vault.get(name)
+        if not item:
+            messagebox.showerror("Error", "Elemento no encontrado.")
+            return
+
+        msg = f"""
+Servicio: {name}
+Usuario: {item.get('usuario', '—')}
+Contraseña: {item.get('password', '—')}
+Descripción: {item.get('descripcion', '—')}
+"""
+        messagebox.showinfo("Detalle", msg)

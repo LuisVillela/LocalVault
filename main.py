@@ -1,4 +1,3 @@
-# main.py
 from gui.interface import LocalVaultApp
 import tkinter as tk
 
