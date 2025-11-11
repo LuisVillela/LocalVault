@@ -1,6 +1,7 @@
+# gui/interface.py
 import tkinter as tk
 from tkinter import messagebox, simpledialog
-import pyperclip, threading, time
+import pyperclip
 from src.vault_manager import load_vault, save_vault
 
 class LocalVaultApp:
@@ -80,13 +81,23 @@ class LocalVaultApp:
 
         tk.Button(
             btn_frame,
+            text="🗎 Copiar",
+            bg="#6a1b9a",
+            fg="white",
+            relief="flat",
+            width=12,
+            command=self.copy_password_direct
+        ).grid(row=0, column=2, padx=5)
+
+        tk.Button(
+            btn_frame,
             text="🗑 Eliminar",
             bg="#f44336",
             fg="white",
             relief="flat",
             width=12,
             command=self.delete_password
-        ).grid(row=0, column=2, padx=5)
+        ).grid(row=0, column=3, padx=5)
 
     # === Refrescar lista ===
     def refresh_list(self):
@@ -115,7 +126,7 @@ class LocalVaultApp:
         save_vault(self.vault, self.master_key)
         self.refresh_list()
 
-    # === Ver contraseña (copiar al portapapeles) ===
+    # === Ver contraseña: pide la clave maestra y muestra modal con la contraseña visible ===
     def view_password(self):
         sel = self.listbox.curselection()
         if not sel:
@@ -138,18 +149,61 @@ class LocalVaultApp:
             messagebox.showerror("Error", "Elemento no encontrado.")
             return
 
-        pw = item.get("password")
-        pyperclip.copy(pw)
-        messagebox.showinfo(
-            "Copiado",
-            f"Contraseña de {name} copiada al portapapeles por 10 segundos."
-        )
+        # Mostrar una ventana modal con la info y un botón "Copiar"
+        modal = tk.Toplevel(self.root)
+        modal.title(f"{name} — Detalle")
+        modal.geometry("420x260")
+        modal.configure(bg="#222222")
+        modal.resizable(False, False)
 
-        def clear_clip():
-            time.sleep(10)
-            if pyperclip.paste() == pw:
-                pyperclip.copy("")
-        threading.Thread(target=clear_clip, daemon=True).start()
+        tk.Label(modal, text=f"Servicio: {name}", fg="white", bg="#222222", font=("SF Pro Display", 12, "bold")).pack(pady=(18,6))
+        tk.Label(modal, text=f"Usuario: {item.get('user','—')}", fg="white", bg="#222222", font=("SF Pro Display", 11)).pack(pady=(0,6))
+
+        pw_label = tk.Label(modal, text=f"Contraseña: {item.get('password','—')}", fg="#ffeb3b", bg="#222222", font=("SF Pro Display", 12, "bold"))
+        pw_label.pack(pady=(0,10))
+
+        tk.Label(modal, text=f"Descripción: {item.get('description','—')}", fg="white", bg="#222222", font=("SF Pro Display", 10)).pack(pady=(0,12))
+
+        btn_frame = tk.Frame(modal, bg="#222222")
+        btn_frame.pack(pady=6)
+
+        def copy_now():
+            pyperclip.copy(item.get('password',''))
+            messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
+
+        tk.Button(btn_frame, text="Copiar", bg="#6a1b9a", fg="white", width=12, command=copy_now).grid(row=0, column=0, padx=6)
+        tk.Button(btn_frame, text="Cerrar", bg="#9e9e9e", fg="black", width=12, command=modal.destroy).grid(row=0, column=1, padx=6)
+
+        # Asegurarse que la modal esté por encima
+        modal.transient(self.root)
+        modal.grab_set()
+        self.root.wait_window(modal)
+
+    # === Copiar contraseña directamente (sin modal) ===
+    def copy_password_direct(self):
+        sel = self.listbox.curselection()
+        if not sel:
+            messagebox.showerror("Error", "Selecciona un servicio.")
+            return
+        name = self.listbox.get(sel[0]).replace("🔒 ", "")
+
+        re_pass = simpledialog.askstring("Confirmar clave maestra", "Introduce tu clave maestra:", show="*")
+        if not re_pass:
+            return
+
+        try:
+            vault = load_vault(re_pass)
+        except Exception:
+            messagebox.showerror("Error", "Clave maestra incorrecta.")
+            return
+
+        item = vault.get(name)
+        if not item:
+            messagebox.showerror("Error", "Elemento no encontrado.")
+            return
+
+        pyperclip.copy(item.get('password',''))
+        messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
 
     # === Eliminar contraseña ===
     def delete_password(self):
