@@ -1,18 +1,19 @@
-# gui/interface.py
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import pyperclip
 from src.vault_manager import load_vault, save_vault
 
+
 class LocalVaultApp:
     def __init__(self, root):
         self.root = root
         self.root.title("LocalVault – Password Edition")
-        self.root.geometry("520x400")
+        self.root.geometry("560x420")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
+        self.root.option_add("*Font", "Helvetica 11")
 
-        # === Paso 1: pedir clave maestra ===
+        # === Clave maestra ===
         self.master_key = simpledialog.askstring(
             "Clave Maestra",
             "Introduce tu clave maestra:",
@@ -23,89 +24,94 @@ class LocalVaultApp:
             self.root.destroy()
             return
 
-        # === Paso 2: intentar cargar o crear el vault ===
         try:
             self.vault = load_vault(self.master_key)
         except Exception:
             messagebox.showwarning("Nuevo Vault", "No se encontró un archivo, se creará uno nuevo.")
             self.vault = {}
 
+        # === Contenedor principal ===
+        container = tk.Frame(root, bg="#1e1e1e", padx=20, pady=20)
+        container.pack(fill="both", expand=True)
+
         # === Título ===
         tk.Label(
-            root,
-            text="🔒 Gestor de Contraseñas",
+            container,
+            text="Gestor de Contraseñas",
             fg="#00bcd4",
             bg="#1e1e1e",
-            font=("SF Pro Display", 16, "bold")
-        ).pack(pady=15)
+            font=("SF Pro Display", 18, "bold"),
+            anchor="w"
+        ).pack(fill="x", pady=(0, 10))
 
-        # === Listbox para mostrar los servicios ===
-        self.listbox = tk.Listbox(
-            root,
-            bg="#2e2e2e",
+        # === Frame de lista ===
+        list_frame = tk.Frame(container, bg="#1e1e1e")
+        list_frame.pack(fill="both", expand=True)
+
+        self.list_container = tk.Frame(list_frame, bg="#2a2a2a")
+        self.list_container.pack(fill="both", expand=True)
+
+        # === Botón agregar (fijo abajo) ===
+        tk.Button(
+            container,
+            text="Agregar Contraseña",
+            bg="#00bcd4",
             fg="white",
-            selectbackground="#00bcd4",
-            font=("SF Pro Display", 12),
-            width=40,
-            height=10,
-            relief="flat"
-        )
-        self.listbox.pack(pady=10)
+            relief="flat",
+            font=("SF Pro Display", 12, "bold"),
+            height=2,
+            command=self.add_password
+        ).pack(fill="x", pady=(15, 0))
 
-        # Cargar los elementos existentes
         self.refresh_list()
 
-        # === Botones principales ===
-        btn_frame = tk.Frame(root, bg="#1e1e1e")
-        btn_frame.pack(pady=10)
-
-        tk.Button(
-            btn_frame,
-            text="➕ Agregar",
-            bg="#4caf50",
-            fg="white",
-            relief="flat",
-            width=12,
-            command=self.add_password
-        ).grid(row=0, column=0, padx=5)
-
-        tk.Button(
-            btn_frame,
-            text="👁 Ver",
-            bg="#2196f3",
-            fg="white",
-            relief="flat",
-            width=12,
-            command=self.view_password
-        ).grid(row=0, column=1, padx=5)
-
-        tk.Button(
-            btn_frame,
-            text="🗎 Copiar",
-            bg="#6a1b9a",
-            fg="white",
-            relief="flat",
-            width=12,
-            command=self.copy_password_direct
-        ).grid(row=0, column=2, padx=5)
-
-        tk.Button(
-            btn_frame,
-            text="🗑 Eliminar",
-            bg="#f44336",
-            fg="white",
-            relief="flat",
-            width=12,
-            command=self.delete_password
-        ).grid(row=0, column=3, padx=5)
-
-    # === Refrescar lista ===
     def refresh_list(self):
-        self.listbox.delete(0, tk.END)
-        for name in self.vault.keys():
-            self.listbox.insert(tk.END, f"🔒 {name}")
+        # Limpiar lista
+        for widget in self.list_container.winfo_children():
+            widget.destroy()
 
-    # === Agregar nueva contraseña ===
+        if not self.vault:
+            tk.Label(
+                self.list_container,
+                text="No hay contraseñas guardadas.",
+                fg="#aaaaaa",
+                bg="#2a2a2a",
+                font=("SF Pro Display", 11, "italic")
+            ).pack(pady=20)
+            return
+
+        for name in self.vault.keys():
+            row = tk.Frame(self.list_container, bg="#2a2a2a", pady=5)
+            row.pack(fill="x", padx=4, pady=2)
+
+            tk.Label(
+                row,
+                text=name,
+                fg="white",
+                bg="#2a2a2a",
+                anchor="w"
+            ).pack(side="left", padx=(8, 0), fill="x", expand=True)
+
+            # Botones "View" y "Delete"
+            tk.Button(
+                row,
+                text="View",
+                bg="#2a2a2a",
+                fg="#00bcd4",
+                relief="flat",
+                cursor="hand2",
+                command=lambda n=name: self.view_password(n)
+            ).pack(side="right", padx=(0, 10))
+            tk.Button(
+                row,
+                text="Delete",
+                bg="#2a2a2a",
+                fg="#f44336",
+                relief="flat",
+                cursor="hand2",
+                command=lambda n=name: self.delete_password(n)
+            ).pack(side="right", padx=(0, 5))
+
     def add_password(self):
         name = simpledialog.askstring("Servicio", "Nombre del servicio:")
         if not name:
@@ -126,14 +132,7 @@ class LocalVaultApp:
         save_vault(self.vault, self.master_key)
         self.refresh_list()
 
-    # === Ver contraseña: pide la clave maestra y muestra modal con la contraseña visible ===
-    def view_password(self):
-        sel = self.listbox.curselection()
-        if not sel:
-            messagebox.showerror("Error", "Selecciona un servicio.")
-            return
-        name = self.listbox.get(sel[0]).replace("🔒 ", "")
-
+    def view_password(self, name):
         re_pass = simpledialog.askstring("Confirmar clave maestra", "Introduce tu clave maestra:", show="*")
         if not re_pass:
             return
@@ -149,69 +148,35 @@ class LocalVaultApp:
             messagebox.showerror("Error", "Elemento no encontrado.")
             return
 
-        # Mostrar una ventana modal con la info y un botón "Copiar"
+        # === Modal de detalles ===
         modal = tk.Toplevel(self.root)
-        modal.title(f"{name} — Detalle")
-        modal.geometry("420x260")
-        modal.configure(bg="#222222")
+        modal.title(f"{name}")
+        modal.geometry("460x280")
+        modal.configure(bg="#1e1e1e", padx=20, pady=20)
         modal.resizable(False, False)
 
-        tk.Label(modal, text=f"Servicio: {name}", fg="white", bg="#222222", font=("SF Pro Display", 12, "bold")).pack(pady=(18,6))
-        tk.Label(modal, text=f"Usuario: {item.get('user','—')}", fg="white", bg="#222222", font=("SF Pro Display", 11)).pack(pady=(0,6))
+        tk.Label(modal, text=name, fg="#00bcd4", bg="#1e1e1e",
+                 font=("SF Pro Display", 16, "bold"), anchor="w").pack(fill="x", pady=(0, 15))
 
-        pw_label = tk.Label(modal, text=f"Contraseña: {item.get('password','—')}", fg="#ffeb3b", bg="#222222", font=("SF Pro Display", 12, "bold"))
-        pw_label.pack(pady=(0,10))
-
-        tk.Label(modal, text=f"Descripción: {item.get('description','—')}", fg="white", bg="#222222", font=("SF Pro Display", 10)).pack(pady=(0,12))
-
-        btn_frame = tk.Frame(modal, bg="#222222")
-        btn_frame.pack(pady=6)
+        info = f"Usuario: {item.get('user', '—')}\n\n" \
+               f"Contraseña: {item.get('password', '—')}\n\n" \
+               f"Descripción: {item.get('description', '—')}"
+        tk.Label(modal, text=info, fg="white", bg="#1e1e1e",
+                 justify="left", anchor="w", font=("SF Pro Display", 12)).pack(fill="x", pady=(0, 20))
 
         def copy_now():
-            pyperclip.copy(item.get('password',''))
+            pyperclip.copy(item.get('password', ''))
             messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
 
-        tk.Button(btn_frame, text="Copiar", bg="#6a1b9a", fg="white", width=12, command=copy_now).grid(row=0, column=0, padx=6)
-        tk.Button(btn_frame, text="Cerrar", bg="#9e9e9e", fg="black", width=12, command=modal.destroy).grid(row=0, column=1, padx=6)
+        tk.Button(modal, text="Copiar al Portapapeles", bg="#00bcd4", fg="white",
+                  font=("SF Pro Display", 12, "bold"), relief="flat", height=2,
+                  command=copy_now).pack(fill="x", pady=(10, 0))
 
-        # Asegurarse que la modal esté por encima
         modal.transient(self.root)
         modal.grab_set()
         self.root.wait_window(modal)
 
-    # === Copiar contraseña directamente (sin modal) ===
-    def copy_password_direct(self):
-        sel = self.listbox.curselection()
-        if not sel:
-            messagebox.showerror("Error", "Selecciona un servicio.")
-            return
-        name = self.listbox.get(sel[0]).replace("🔒 ", "")
-
-        re_pass = simpledialog.askstring("Confirmar clave maestra", "Introduce tu clave maestra:", show="*")
-        if not re_pass:
-            return
-
-        try:
-            vault = load_vault(re_pass)
-        except Exception:
-            messagebox.showerror("Error", "Clave maestra incorrecta.")
-            return
-
-        item = vault.get(name)
-        if not item:
-            messagebox.showerror("Error", "Elemento no encontrado.")
-            return
-
-        pyperclip.copy(item.get('password',''))
-        messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
-
-    # === Eliminar contraseña ===
-    def delete_password(self):
-        sel = self.listbox.curselection()
-        if not sel:
-            messagebox.showerror("Error", "Selecciona un servicio para eliminar.")
-            return
-        name = self.listbox.get(sel[0]).replace("🔒 ", "")
+    def delete_password(self, name):
         confirm = messagebox.askyesno("Confirmar", f"¿Eliminar {name}?")
         if confirm:
             self.vault.pop(name, None)
