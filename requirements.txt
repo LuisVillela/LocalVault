@@ -1,1 +1,5 @@
-echo "pyperclip" >> requirements.txt
+pyperclip
+cryptography
+mysql-connector-python
+bcrypt
+flask

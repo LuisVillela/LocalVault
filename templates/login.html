@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalVault - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo">
+                <h1>🔐 LocalVault</h1>
+                <p>Tu gestor de contraseñas personal</p>
+            </div>
+            
+            <!-- Pestañas para Login/Registro -->
+            <div class="tabs">
+                <button class="tab-button active" onclick="showTab('login')">Iniciar Sesión</button>
+                <button class="tab-button" onclick="showTab('register')">Registrarse</button>
+            </div>
+            
+            <!-- Formulario de Login -->
+            <div id="login-tab" class="tab-content active">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Correo electrónico</label>
+                        <input type="email" id="login-email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Contraseña</label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Iniciar Sesión</span>
+                        <div class="spinner" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Formulario de Registro -->
+            <div id="register-tab" class="tab-content">
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="register-name">Nombre completo</label>
+                        <input type="text" id="register-name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-email">Correo electrónico</label>
+                        <input type="email" id="register-email" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-password">Contraseña</label>
+                        <input type="password" id="register-password" name="password" required>
+                        <small class="password-hint">Mínimo 8 caracteres, 2 mayúsculas, 1 dígito y 1 carácter especial</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="register-birthdate">Fecha de nacimiento</label>
+                        <input type="date" id="register-birthdate" name="birthdate" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">
+                        <span class="btn-text">Crear Cuenta</span>
+                        <div class="spinner" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Área de mensajes -->
+            <div id="message-area"></div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+</body>
+</html>

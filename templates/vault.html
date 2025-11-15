@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalVault - Gestor de Contraseñas</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="vault-container">
+        <!-- Header -->
+        <header class="vault-header">
+            <div class="header-content">
+                <h1>🔐 LocalVault</h1>
+                <div class="user-info">
+                    <span>{{ user_name }}</span>
+                    <a href="/logout" class="logout-btn">Cerrar Sesión</a>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="vault-main">
+            <div class="vault-controls">
+                <h2>Mis Contraseñas</h2>
+                <button id="add-password-btn" class="btn btn-primary">
+                    ➕ Agregar Contraseña
+                </button>
+            </div>
+            
+            <!-- Lista de Contraseñas -->
+            <div id="passwords-list" class="passwords-list">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </div>
+            
+            <!-- Mensaje cuando no hay contraseñas -->
+            <div id="no-passwords" class="no-passwords" style="display: none;">
+                <p>No tienes contraseñas guardadas aún.</p>
+                <p>¡Agrega tu primera contraseña usando el botón de arriba!</p>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Modal para agregar/ver contraseñas -->
+    <div id="password-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Agregar Contraseña</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <form id="password-form">
+                <div class="form-group">
+                    <label for="password-name">Nombre del servicio</label>
+                    <input type="text" id="password-name" name="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-user">Usuario/Email</label>
+                    <input type="text" id="password-user" name="user">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-password">Contraseña</label>
+                    <div class="password-input">
+                        <input type="password" id="password-password" name="password" required>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility()">👁️</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-description">Descripción (opcional)</label>
+                    <textarea id="password-description" name="description" rows="2"></textarea>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+            
+            <!-- Botones para vista de contraseña -->
+            <div id="view-buttons" class="modal-buttons" style="display: none;">
+                <button type="button" class="btn btn-info" onclick="copyPassword()">📋 Copiar</button>
+                <button type="button" class="btn btn-danger" onclick="deletePassword()">🗑️ Eliminar</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Área de mensajes -->
+    <div id="message-area"></div>
+    
+    <script src="{{ url_for('static', filename='js/vault.js') }}"></script>
+</body>
+</html>

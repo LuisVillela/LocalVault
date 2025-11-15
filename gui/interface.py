@@ -5,44 +5,49 @@ from src.vault_manager import load_vault, save_vault
 
 
 class LocalVaultApp:
-    def __init__(self, root):
+    def __init__(self, root, user_data, master_key):
         self.root = root
-        self.root.title("LocalVault – Password Edition")
+        self.user_data = user_data
+        self.user_id = user_data['id']
+        self.master_key = master_key
+        
+        self.root.title(f"LocalVault – {user_data['nombre']}")
         self.root.geometry("560x420")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
         self.root.option_add("*Font", "{SF Pro Display} 11")
 
-        # === Clave maestra ===
-        self.master_key = simpledialog.askstring(
-            "Clave Maestra",
-            "Introduce tu clave maestra:",
-            show="*"
-        )
-        if not self.master_key:
-            messagebox.showerror("Error", "Debes ingresar una clave maestra.")
-            self.root.destroy()
-            return
-
         try:
-            self.vault = load_vault(self.master_key)
+            self.vault = load_vault(self.master_key, self.user_id)
         except Exception:
-            messagebox.showwarning("Nuevo Vault", "No se encontró un archivo, se creará uno nuevo.")
+            messagebox.showwarning("Nuevo Vault", "No se encontró un archivo de vault, se creará uno nuevo.")
             self.vault = {}
 
         # === Contenedor principal ===
         container = tk.Frame(root, bg="#1e1e1e", padx=20, pady=20)
         container.pack(fill="both", expand=True)
 
-        # === Título ===
+        # === Header con info del usuario ===
+        header_frame = tk.Frame(container, bg="#1e1e1e")
+        header_frame.pack(fill="x", pady=(0, 20))
+        
         tk.Label(
-            container,
+            header_frame,
             text="Gestor de Contraseñas",
             fg="#ffffff",
             bg="#1e1e1e",
             font=("SF Pro Display", 18, "bold"),
             anchor="w"
-        ).pack(fill="x", pady=(0, 10))
+        ).pack(side="left")
+        
+        tk.Label(
+            header_frame,
+            text=f"Usuario: {user_data['nombre']}",
+            fg="#aaaaaa",
+            bg="#1e1e1e",
+            font=("SF Pro Display", 10),
+            anchor="e"
+        ).pack(side="right")
 
         # === Frame de lista ===
         list_frame = tk.Frame(container, bg="#1e1e1e")
@@ -138,21 +143,17 @@ class LocalVaultApp:
             "password": password,
             "description": desc or ""
         }
-        save_vault(self.vault, self.master_key)
+        save_vault(self.vault, self.master_key, self.user_id)
         self.refresh_list()
 
     def view_password(self, name):
+        # Verificar clave maestra una vez más por seguridad
         re_pass = simpledialog.askstring("Confirmar clave maestra", "Introduce tu clave maestra:", show="*")
-        if not re_pass:
-            return
-
-        try:
-            vault = load_vault(re_pass)
-        except Exception:
+        if not re_pass or re_pass != self.master_key:
             messagebox.showerror("Error", "Clave maestra incorrecta.")
             return
 
-        item = vault.get(name)
+        item = self.vault.get(name)
         if not item:
             messagebox.showerror("Error", "Elemento no encontrado.")
             return
@@ -190,5 +191,5 @@ class LocalVaultApp:
         confirm = messagebox.askyesno("Confirmar", f"¿Eliminar {name}?")
         if confirm:
             self.vault.pop(name, None)
-            save_vault(self.vault, self.master_key)
+            save_vault(self.vault, self.master_key, self.user_id)
             self.refresh_list()
