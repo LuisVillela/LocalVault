@@ -227,4 +227,8 @@ if __name__ == '__main__':
     print("🚀 Iniciando LocalVault Web...")
     print("📱 Abrir en navegador: http://localhost:8080")
     
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    # Forzar puerto 8080 explícitamente
+    import os
+    os.environ.pop('FLASK_RUN_PORT', None)  # Limpiar variables de entorno
+    
+    app.run(debug=True, host='127.0.0.1', port=8080, use_reloader=False)

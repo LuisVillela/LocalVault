@@ -62,8 +62,23 @@ function openAddModal() {
     document.getElementById('password-form').style.display = 'block';
     document.getElementById('view-buttons').style.display = 'none';
     
+    // Mostrar botones del formulario
+    const formButtons = document.querySelector('#password-form .modal-buttons');
+    if (formButtons) formButtons.style.display = 'flex';
+    
+    // Habilitar todos los campos
+    document.querySelectorAll('#password-form input, #password-form textarea').forEach(field => {
+        field.disabled = false;
+    });
+    
     // Limpiar formulario
     document.getElementById('password-form').reset();
+    
+    // Restablecer campo de contraseña a modo oculto
+    const passwordField = document.getElementById('password-password');
+    const toggleBtn = document.querySelector('.toggle-password');
+    passwordField.type = 'password';
+    toggleBtn.textContent = '👁️';
     
     // Mostrar modal
     document.getElementById('password-modal').style.display = 'block';
@@ -80,8 +95,12 @@ async function viewPassword(name) {
             currentPassword = result.data;
             
             document.getElementById('modal-title').textContent = 'Ver Contraseña';
-            document.getElementById('password-form').style.display = 'none';
+            document.getElementById('password-form').style.display = 'block'; // Mantener visible para el botón
             document.getElementById('view-buttons').style.display = 'flex';
+            
+            // Ocultar botones del formulario en modo vista
+            const formButtons = document.querySelector('#password-form .modal-buttons');
+            if (formButtons) formButtons.style.display = 'none';
             
             // Llenar campos (solo lectura)
             document.getElementById('password-name').value = currentPassword.name;
@@ -89,10 +108,15 @@ async function viewPassword(name) {
             document.getElementById('password-password').value = currentPassword.password;
             document.getElementById('password-description').value = currentPassword.description;
             
-            // Deshabilitar campos
+            // Deshabilitar campos pero permitir ver contraseña
             document.querySelectorAll('#password-form input, #password-form textarea').forEach(field => {
                 field.disabled = true;
             });
+            
+            // Mantener funcionalidad del botón de ver contraseña
+            document.querySelector('.toggle-password').disabled = false;
+            document.querySelector('.toggle-password').style.opacity = '1';
+            document.querySelector('.toggle-password').style.pointerEvents = 'auto';
             
             document.getElementById('password-modal').style.display = 'block';
         } else {
@@ -201,6 +225,20 @@ function closeModal() {
     document.querySelectorAll('#password-form input, #password-form textarea').forEach(field => {
         field.disabled = false;
     });
+    
+    // Restaurar visibilidad del formulario y botones
+    document.getElementById('password-form').style.display = 'block';
+    document.getElementById('view-buttons').style.display = 'none';
+    
+    // Mostrar botones del formulario nuevamente
+    const formButtons = document.querySelector('#password-form .modal-buttons');
+    if (formButtons) formButtons.style.display = 'flex';
+    
+    // Restablecer campo de contraseña a modo oculto
+    const passwordField = document.getElementById('password-password');
+    const toggleBtn = document.querySelector('.toggle-password');
+    passwordField.type = 'password';
+    toggleBtn.textContent = '👁️';
     
     // Limpiar formulario
     document.getElementById('password-form').reset();
