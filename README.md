@@ -92,16 +92,6 @@ Para una guía paso a paso detallada, consulta **[SETUP_GUIDE.md](./SETUP_GUIDE.
 4. **Ejecutar aplicación web** en puerto 8080
 5. **¡Disfrutar!** 🎉
 
-## 🤝 Contribuciones
-¡Las contribuciones son bienvenidas! Por favor:
-1. Haz fork del proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📄 Licencia
-Este proyecto está bajo la Licencia MIT - consulta el archivo [LICENSE](LICENSE) para más detalles.
 
 ---
 **💡 ¿Problemas de instalación?** Revisa [SETUP_GUIDE.md](./SETUP_GUIDE.md) para soluciones detalladas.bash
