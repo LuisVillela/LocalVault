@@ -28,5 +28,8 @@ def save_vault(data: dict, master_password: str, user_id: int):
         with open(vault_file, "wb") as f:
             f.write(blob)
     except Exception as e:
+        import traceback
         print(f"[❌ Error al guardar vault {vault_file}] {e}")
+        traceback.print_exc()
         raise
+
