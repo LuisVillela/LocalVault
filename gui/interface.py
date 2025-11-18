@@ -1,53 +1,50 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import pyperclip
+from pathlib import Path  # ✅ agregado
 from src.vault_manager import load_vault, save_vault
+from src.auth_mac import ensure_auth_gui, biometric_check
+
+
 
 
 class LocalVaultApp:
-    def __init__(self, root, user_data, master_key):
+    def __init__(self, root):
         self.root = root
-        self.user_data = user_data
-        self.user_id = user_data['id']
-        self.master_key = master_key
-        
-        self.root.title(f"LocalVault – {user_data['nombre']}")
+        self.root.title("LocalVault – Password Edition")
         self.root.geometry("560x420")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
         self.root.option_add("*Font", "{SF Pro Display} 11")
 
+        # === Autenticación local (PIN + Touch ID) ===
+        pin = ensure_auth_gui(simpledialog, messagebox)
+        if not pin:
+            self.root.destroy()
+            return
+
+        self.master_key = pin
+        self.vault_path = Path("vault_local.json")  # ✅ solo un vault local
+
         try:
-            self.vault = load_vault(self.master_key, self.user_id)
+            self.vault = load_vault(self.master_key)
         except Exception:
-            messagebox.showwarning("Nuevo Vault", "No se encontró un archivo de vault, se creará uno nuevo.")
+            messagebox.showwarning("Nuevo Vault", "No se encontró un archivo, se creará uno nuevo.")
             self.vault = {}
 
         # === Contenedor principal ===
         container = tk.Frame(root, bg="#1e1e1e", padx=20, pady=20)
         container.pack(fill="both", expand=True)
 
-        # === Header con info del usuario ===
-        header_frame = tk.Frame(container, bg="#1e1e1e")
-        header_frame.pack(fill="x", pady=(0, 20))
-        
+        # === Título ===
         tk.Label(
-            header_frame,
+            container,
             text="Gestor de Contraseñas",
             fg="#ffffff",
             bg="#1e1e1e",
             font=("SF Pro Display", 18, "bold"),
             anchor="w"
-        ).pack(side="left")
-        
-        tk.Label(
-            header_frame,
-            text=f"Usuario: {user_data['nombre']}",
-            fg="#aaaaaa",
-            bg="#1e1e1e",
-            font=("SF Pro Display", 10),
-            anchor="e"
-        ).pack(side="right")
+        ).pack(fill="x", pady=(0, 10))
 
         # === Frame de lista ===
         list_frame = tk.Frame(container, bg="#1e1e1e")
@@ -61,7 +58,7 @@ class LocalVaultApp:
             container,
             text="Agregar Contraseña",
             bg="#1e1e1e",
-            fg="#1e1e1e",
+            fg="#ffffff",
             relief="solid",
             borderwidth=1,
             highlightthickness=1,
@@ -72,6 +69,7 @@ class LocalVaultApp:
         ).pack(fill="x", pady=(15, 0))
 
         self.refresh_list()
+
 
     def refresh_list(self):
         for widget in self.list_container.winfo_children():
@@ -143,22 +141,43 @@ class LocalVaultApp:
             "password": password,
             "description": desc or ""
         }
-        save_vault(self.vault, self.master_key, self.user_id)
+        save_vault(self.vault, self.master_key)
         self.refresh_list()
 
-    def view_password(self, name):
-        # Verificar clave maestra una vez más por seguridad
-        re_pass = simpledialog.askstring("Confirmar clave maestra", "Introduce tu clave maestra:", show="*")
-        if not re_pass or re_pass != self.master_key:
-            messagebox.showerror("Error", "Clave maestra incorrecta.")
-            return
+    def delete_password(self, name):
+        confirm = messagebox.askyesno("Confirmar", f"¿Eliminar {name}?")
+        if confirm:
+            self.vault.pop(name, None)
+            save_vault(self.vault, self.master_key)
+            self.refresh_list()
 
+    def view_password(self, name):
+        import subprocess, os
         item = self.vault.get(name)
         if not item:
             messagebox.showerror("Error", "Elemento no encontrado.")
             return
 
-        # === Modal ===
+        authenticated = False
+        if os.path.exists("touchid_enabled.flag"):
+            try:
+                result = subprocess.run(
+                    ["osascript", "-e",
+                    'display dialog "Autenticación Touch ID requerida" buttons {"Cancelar", "Continuar"} default button "Continuar"'],
+                    capture_output=True
+                )
+                if result.returncode == 0:
+                    authenticated = True
+            except Exception:
+                pass
+
+        if not authenticated:
+            re_pass = simpledialog.askstring("Verificación", "Introduce tu contraseña de cuenta:", show="*")
+            if not re_pass or re_pass != self.master_key:
+                messagebox.showerror("Error", "Autenticación fallida.")
+                return
+
+        # ✅ Mostrar solo un modal con la info
         modal = tk.Toplevel(self.root)
         modal.title(f"{name}")
         modal.geometry("460x280")
@@ -166,30 +185,24 @@ class LocalVaultApp:
         modal.resizable(False, False)
 
         tk.Label(modal, text=name, fg="#ffffff", bg="#1e1e1e",
-                 font=("SF Pro Display", 16, "bold"), anchor="w").pack(fill="x", pady=(0, 15))
+                font=("SF Pro Display", 16, "bold"), anchor="w").pack(fill="x", pady=(0, 15))
 
         info = f"Usuario: {item.get('user', '—')}\n\n" \
-               f"Contraseña: {item.get('password', '—')}\n\n" \
-               f"Descripción: {item.get('description', '—')}"
+            f"Contraseña: {item.get('password', '—')}\n\n" \
+            f"Descripción: {item.get('description', '—')}"
         tk.Label(modal, text=info, fg="#ffffff", bg="#1e1e1e",
-                 justify="left", anchor="w", font=("SF Pro Display", 12)).pack(fill="x", pady=(0, 20))
+                justify="left", anchor="w", font=("SF Pro Display", 12)).pack(fill="x", pady=(0, 20))
 
         def copy_now():
             pyperclip.copy(item.get('password', ''))
-            messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles (sin límite de tiempo).")
+            messagebox.showinfo("Copiado", "Contraseña copiada al portapapeles.")
 
-        tk.Button(modal, text="Copiar al Portapapeles", bg="#1e1e1e", fg="#1e1e1e",
-                  relief="solid", borderwidth=1, highlightthickness=1, highlightbackground="#444444",
-                  font=("SF Pro Display", 12, "bold"), height=2,
-                  command=copy_now).pack(fill="x", pady=(10, 0))
+        tk.Button(modal, text="Copiar al Portapapeles", bg="#1e1e1e", fg="#ffffff",
+                relief="solid", borderwidth=1, highlightthickness=1, highlightbackground="#444444",
+                font=("SF Pro Display", 12, "bold"), height=2,
+                command=copy_now).pack(fill="x", pady=(10, 0))
 
         modal.transient(self.root)
         modal.grab_set()
         self.root.wait_window(modal)
 
-    def delete_password(self, name):
-        confirm = messagebox.askyesno("Confirmar", f"¿Eliminar {name}?")
-        if confirm:
-            self.vault.pop(name, None)
-            save_vault(self.vault, self.master_key, self.user_id)
-            self.refresh_list()

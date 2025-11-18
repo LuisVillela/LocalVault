@@ -209,6 +209,23 @@ def api_delete_password(name):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+@app.route('/api/verify-account-password', methods=['POST'])
+def verify_account_password():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'No autorizado'}), 401
+
+    data = request.get_json()
+    password = data.get('password', '')
+    user = db_manager.authenticate_user(session['user_email'], password)
+
+    if user:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': 'Contraseña incorrecta'}), 401
+
+
+
 @app.route('/logout')
 def logout():
     """Cerrar sesión"""

@@ -84,9 +84,27 @@ function openAddModal() {
     document.getElementById('password-modal').style.display = 'block';
 }
 
-// Ver detalles de una contraseña
+// Ver detalles de una contraseña con verificación previa
 async function viewPassword(name) {
     try {
+        // === Paso 1: solicitar verificación ===
+        const userPassword = prompt("Introduce tu contraseña para continuar:");
+        if (!userPassword) return;
+
+        // Llamar al endpoint de verificación
+        const verifyRes = await fetch('/api/verify-account-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: userPassword })
+        });
+        const verifyResult = await verifyRes.json();
+
+        if (!verifyResult.success) {
+            showMessage(verifyResult.message || 'Contraseña incorrecta.', 'error');
+            return;
+        }
+
+        // === Paso 2: cargar la contraseña real si la verificación fue exitosa ===
         const response = await fetch(`/api/vault/passwords/${encodeURIComponent(name)}`);
         const result = await response.json();
         
@@ -95,25 +113,21 @@ async function viewPassword(name) {
             currentPassword = result.data;
             
             document.getElementById('modal-title').textContent = 'Ver Contraseña';
-            document.getElementById('password-form').style.display = 'block'; // Mantener visible para el botón
+            document.getElementById('password-form').style.display = 'block';
             document.getElementById('view-buttons').style.display = 'flex';
             
-            // Ocultar botones del formulario en modo vista
             const formButtons = document.querySelector('#password-form .modal-buttons');
             if (formButtons) formButtons.style.display = 'none';
             
-            // Llenar campos (solo lectura)
             document.getElementById('password-name').value = currentPassword.name;
             document.getElementById('password-user').value = currentPassword.user;
             document.getElementById('password-password').value = currentPassword.password;
             document.getElementById('password-description').value = currentPassword.description;
             
-            // Deshabilitar campos pero permitir ver contraseña
             document.querySelectorAll('#password-form input, #password-form textarea').forEach(field => {
                 field.disabled = true;
             });
             
-            // Mantener funcionalidad del botón de ver contraseña
             document.querySelector('.toggle-password').disabled = false;
             document.querySelector('.toggle-password').style.opacity = '1';
             document.querySelector('.toggle-password').style.pointerEvents = 'auto';
@@ -126,6 +140,7 @@ async function viewPassword(name) {
         showMessage('Error de conexión al cargar contraseña.', 'error');
     }
 }
+
 
 // Manejar envío del formulario
 async function handlePasswordSubmit(e) {
@@ -274,6 +289,25 @@ function showMessage(text, type) {
         }
     }, 3000);
 }
+
+async function requestPasswordVerification() {
+    const userPassword = prompt("Introduce tu contraseña para continuar:");
+    if (!userPassword) return false;
+
+    const res = await fetch('/api/verify-account-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: userPassword })
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+        alert(result.message || "Contraseña incorrecta.");
+        return false;
+    }
+    return true;
+}
+
 
 // Función para escapar HTML
 function escapeHtml(text) {
