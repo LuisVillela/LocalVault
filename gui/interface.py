@@ -4,33 +4,46 @@ import pyperclip
 from pathlib import Path  # ✅ agregado
 from src.vault_manager import load_vault, save_vault
 from src.auth_mac import ensure_auth_gui, biometric_check
+from src.database_manager import DatabaseManager
 
 
 
 
 class LocalVaultApp:
-    def __init__(self, root):
+    def __init__(self, root, user_data=None, master_key=None):
         self.root = root
         self.root.title("LocalVault – Password Edition")
         self.root.geometry("560x420")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
         self.root.option_add("*Font", "{SF Pro Display} 11")
+        # Database manager (used when app launched with authenticated user)
+        self.db_manager = DatabaseManager()
 
-        # === Autenticación local (PIN + Touch ID) ===
-        pin = ensure_auth_gui(simpledialog, messagebox)
-        if not pin:
-            self.root.destroy()
-            return
+        # Si se pasó contexto de usuario (desde main.py), usarlo
+        self.user_id = None
+        if user_data and master_key:
+            self.master_key = master_key
+            self.user_id = user_data.get('id')
+            try:
+                self.vault = load_vault(self.master_key, user_id=self.user_id)
+            except Exception:
+                messagebox.showwarning("Nuevo Vault", "No se encontró un archivo para este usuario, se creará uno nuevo.")
+                self.vault = {}
+        else:
+            # === Autenticación local (PIN + Touch ID) ===
+            pin = ensure_auth_gui(simpledialog, messagebox)
+            if not pin:
+                self.root.destroy()
+                return
 
-        self.master_key = pin
-        self.vault_path = Path("vault_local.json")  # ✅ solo un vault local
-
-        try:
-            self.vault = load_vault(self.master_key)
-        except Exception:
-            messagebox.showwarning("Nuevo Vault", "No se encontró un archivo, se creará uno nuevo.")
-            self.vault = {}
+            self.master_key = pin
+            try:
+                # load_vault sin user_id usa el vault local por defecto
+                self.vault = load_vault(self.master_key)
+            except Exception:
+                messagebox.showwarning("Nuevo Vault", "No se encontró un archivo, se creará uno nuevo.")
+                self.vault = {}
 
         # === Contenedor principal ===
         container = tk.Frame(root, bg="#1e1e1e", padx=20, pady=20)
@@ -141,14 +154,21 @@ class LocalVaultApp:
             "password": password,
             "description": desc or ""
         }
-        save_vault(self.vault, self.master_key)
+        # Guardar en vault del usuario si está autenticado, si no en vault local
+        if self.user_id:
+            save_vault(self.vault, self.master_key, user_id=self.user_id)
+        else:
+            save_vault(self.vault, self.master_key)
         self.refresh_list()
 
     def delete_password(self, name):
         confirm = messagebox.askyesno("Confirmar", f"¿Eliminar {name}?")
         if confirm:
             self.vault.pop(name, None)
-            save_vault(self.vault, self.master_key)
+            if self.user_id:
+                save_vault(self.vault, self.master_key, user_id=self.user_id)
+            else:
+                save_vault(self.vault, self.master_key)
             self.refresh_list()
 
     def view_password(self, name):
@@ -173,9 +193,21 @@ class LocalVaultApp:
 
         if not authenticated:
             re_pass = simpledialog.askstring("Verificación", "Introduce tu contraseña de cuenta:", show="*")
-            if not re_pass or re_pass != self.master_key:
+            if not re_pass:
                 messagebox.showerror("Error", "Autenticación fallida.")
                 return
+
+            # Si estamos en modo usuario (con user_id), regenerar la clave maestra desde la contraseña
+            if self.user_id:
+                candidate = self.db_manager.generate_master_key_for_user(self.user_id, re_pass)
+                if candidate != self.master_key:
+                    messagebox.showerror("Error", "Autenticación fallida.")
+                    return
+            else:
+                # En modo local la master_key es el PIN en texto, comparar directamente
+                if re_pass != self.master_key:
+                    messagebox.showerror("Error", "Autenticación fallida.")
+                    return
 
         # ✅ Mostrar solo un modal con la info
         modal = tk.Toplevel(self.root)

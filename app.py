@@ -33,26 +33,26 @@ def login():
 def api_login():
     """API endpoint para autenticación"""
     data = request.get_json()
-    
+
     email = data.get('email', '').strip()
     password = data.get('password', '')
-    
+
     if not email or not password:
         return jsonify({'success': False, 'message': 'Correo y contraseña son requeridos'}), 400
-    
+
     # Autenticar usuario
     user = db_manager.authenticate_user(email, password)
-    
+
     if user:
         # Guardar datos de sesión
         session['user_id'] = user['id']
         session['user_name'] = user['nombre']
         session['user_email'] = user['correo']
-        
-        # Clave maestra usa directamente la contraseña del usuario
-        session['master_key'] = password
 
-        
+        # Clave maestra: almacenar la clave derivada consistente con DatabaseManager
+        # (usar generate_master_key_for_user para que web y desktop usen la misma clave)
+        session['master_key'] = db_manager.generate_master_key_for_user(user['id'], password)
+
         return jsonify({
             'success': True,
             'message': f'Bienvenido, {user["nombre"]}!',
@@ -65,22 +65,22 @@ def api_login():
 def api_register():
     """API endpoint para registro de usuarios"""
     data = request.get_json()
-    
+
     name = data.get('name', '').strip()
     email = data.get('email', '').strip()
     password = data.get('password', '')
     birthdate = data.get('birthdate', '').strip()
-    
+
     # Validaciones básicas
     if not all([name, email, password, birthdate]):
         return jsonify({'success': False, 'message': 'Todos los campos son requeridos'}), 400
-    
+
     if len(password) < 8:
         return jsonify({'success': False, 'message': 'La contraseña debe tener al menos 8 caracteres'}), 400
-    
+
     # Intentar registrar usuario
     success = db_manager.register_user(name, email, password, birthdate)
-    
+
     if success:
         return jsonify({
             'success': True,
@@ -94,7 +94,7 @@ def vault():
     """Página principal del vault - requiere autenticación"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    
+
     return render_template('vault.html', 
                          user_name=session.get('user_name'),
                          user_email=session.get('user_email'))
@@ -104,13 +104,13 @@ def api_get_passwords():
     """API para obtener todas las contraseñas del usuario"""
     if 'user_id' not in session:
         return jsonify({'success': False, 'message': 'No autorizado'}), 401
-    
+
     try:
         user_id = session['user_id']
         master_key = session['master_key']
-        
+
         vault_data = load_vault(master_key, user_id)
-        
+
         # Convertir a formato para el frontend
         passwords = []
         for name, data in vault_data.items():
@@ -120,7 +120,7 @@ def api_get_passwords():
                 'description': data.get('description', '')
                 # No enviamos la contraseña por seguridad
             })
-        
+
         return jsonify({'success': True, 'passwords': passwords})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
