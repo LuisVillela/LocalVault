@@ -232,6 +232,11 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Crear carpeta de vaults si no existe (para Render o local)
+if not os.path.exists('vaults'):
+    os.makedirs('vaults')
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Iniciando LocalVault Web en puerto {port}...")
