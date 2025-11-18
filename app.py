@@ -49,9 +49,9 @@ def api_login():
         session['user_name'] = user['nombre']
         session['user_email'] = user['correo']
         
-        # Generar clave maestra
-        master_key = db_manager.generate_master_key_for_user(user['id'], password)
-        session['master_key'] = master_key
+        # Clave maestra usa directamente la contraseña del usuario
+        session['master_key'] = password
+
         
         return jsonify({
             'success': True,
