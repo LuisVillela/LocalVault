@@ -23,6 +23,10 @@ def load_vault(master_password: str, user_id: int):
 def save_vault(data: dict, master_password: str, user_id: int):
     """Guarda el vault cifrado del usuario"""
     vault_file = get_vault_file(user_id)
-    blob = encrypt_data(data, master_password)
-    with open(vault_file, "wb") as f:
-        f.write(blob)
+    try:
+        blob = encrypt_data(data, master_password)
+        with open(vault_file, "wb") as f:
+            f.write(blob)
+    except Exception as e:
+        print(f"[❌ Error al guardar vault {vault_file}] {e}")
+        raise

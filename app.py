@@ -5,6 +5,10 @@ from src.vault_manager import load_vault, save_vault
 import os
 import secrets
 
+import logging
+logging.basicConfig(level=logging.INFO)
+
+
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)  # Clave secreta para sesiones
 
