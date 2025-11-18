@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 import os
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'vault.db')
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'vault.db'))
 
 class DatabaseManager:
     def __init__(self):
