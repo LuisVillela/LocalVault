@@ -216,19 +216,24 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
-    # Crear directorio de templates si no existe
+    import os
+
+    # Crear directorios si no existen
     if not os.path.exists('templates'):
         os.makedirs('templates')
     if not os.path.exists('static'):
         os.makedirs('static')
         os.makedirs('static/css')
         os.makedirs('static/js')
-    
+
     print("🚀 Iniciando LocalVault Web...")
-    print("📱 Abrir en navegador: http://localhost:8080")
-    
-    # Forzar puerto 8080 explícitamente
-    import os
-    os.environ.pop('FLASK_RUN_PORT', None)  # Limpiar variables de entorno
-    
-    app.run(debug=True, host='127.0.0.1', port=8080, use_reloader=False)
+
+    # Render asigna el puerto dinámicamente
+    port = int(os.environ.get("PORT", 8080))
+
+    # IMPORTANTE: host debe ser 0.0.0.0 para Render
+    app.run(
+        debug=False,         # En Render, debug debe ir en False
+        host='0.0.0.0',
+        port=port
+    )
