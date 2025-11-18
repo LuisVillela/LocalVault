@@ -2,6 +2,7 @@
 import sqlite3
 import bcrypt
 import hashlib
+import base64
 from typing import Optional, Dict, Any
 import os
 from datetime import datetime
@@ -73,5 +74,6 @@ class DatabaseManager:
     def generate_master_key_for_user(self, user_id: int, user_password: str) -> str:
         """Genera una clave maestra única para cifrado"""
         unique_string = f"{user_id}_{user_password}_localvault"
-        master_key = hashlib.sha256(unique_string.encode()).hexdigest()[:32]
-        return master_key
+        # Use the raw digest (32 bytes) and encode it urlsafe base64 so Fernet accepts it
+        raw_key = hashlib.sha256(unique_string.encode()).digest()
+        return base64.urlsafe_b64encode(raw_key).decode()
