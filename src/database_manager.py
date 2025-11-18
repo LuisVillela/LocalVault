@@ -1,12 +1,10 @@
 # src/database_manager.py
 import sqlite3
-import base64, hashlib
 import bcrypt
 import hashlib
 from typing import Optional, Dict, Any
 import os
 from datetime import datetime
-
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'vault.db'))
 
@@ -72,9 +70,8 @@ class DatabaseManager:
     def _verify_password(self, password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-
     def generate_master_key_for_user(self, user_id: int, user_password: str) -> str:
-        """Genera una clave maestra base64 compatible con Fernet"""
-        raw_key = hashlib.sha256(f"{user_id}_{user_password}_localvault".encode()).digest()
-        return base64.urlsafe_b64encode(raw_key).decode()
-
+        """Genera una clave maestra única para cifrado"""
+        unique_string = f"{user_id}_{user_password}_localvault"
+        master_key = hashlib.sha256(unique_string.encode()).hexdigest()[:32]
+        return master_key
