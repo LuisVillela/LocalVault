@@ -3,3 +3,4 @@ cryptography
 mysql-connector-python
 bcrypt
 flask
+gunicorn

@@ -1,12 +1,19 @@
 # app.py - Aplicación web Flask para LocalVault
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from src.database_manager import DatabaseManager
-from src.vault_manager import load_vault, save_vault
+from src.vault_manager import (
+    load_encrypted_vault,
+    store_encrypted_entry,
+    get_encrypted_entry,
+    delete_encrypted_entry,
+)
 import os
 import secrets
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)  # Clave secreta para sesiones
+# Prefer an explicit SECRET_KEY from the environment (set this on Render)
+# Fallback to a random key for local/dev runs.
+app.secret_key = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
 
 # Instancia global del manager de base de datos
 db_manager = DatabaseManager()
@@ -36,17 +43,13 @@ def api_login():
     
     # Autenticar usuario
     user = db_manager.authenticate_user(email, password)
-    
+
     if user:
-        # Guardar datos de sesión
+        # Guardar datos de sesión (NO guardamos ni derivamos la clave maestra en el servidor)
         session['user_id'] = user['id']
         session['user_name'] = user['nombre']
         session['user_email'] = user['correo']
-        
-        # Generar clave maestra
-        master_key = db_manager.generate_master_key_for_user(user['id'], password)
-        session['master_key'] = master_key
-        
+
         return jsonify({
             'success': True,
             'message': f'Bienvenido, {user["nombre"]}!',
@@ -101,21 +104,16 @@ def api_get_passwords():
     
     try:
         user_id = session['user_id']
-        master_key = session['master_key']
-        
-        vault_data = load_vault(master_key, user_id)
-        
-        # Convertir a formato para el frontend
-        passwords = []
-        for name, data in vault_data.items():
-            passwords.append({
-                'name': name,
-                'user': data.get('user', ''),
-                'description': data.get('description', '')
-                # No enviamos la contraseña por seguridad
-            })
-        
-        return jsonify({'success': True, 'passwords': passwords})
+
+        # Load encrypted vault (server never decrypts)
+        vault = load_encrypted_vault(user_id)
+
+        # Return mapping name -> base64_blob
+        entries = []
+        for name, blob in vault.items():
+            entries.append({'name': name, 'blob': blob})
+
+        return jsonify({'success': True, 'entries': entries})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -127,32 +125,17 @@ def api_add_password():
     
     data = request.get_json()
     
+    # Expect frontend to send encrypted blob (base64) for the entry
     name = data.get('name', '').strip()
-    user = data.get('user', '').strip()
-    password = data.get('password', '')
-    description = data.get('description', '').strip()
-    
-    if not name or not password:
-        return jsonify({'success': False, 'message': 'Nombre y contraseña son requeridos'}), 400
-    
+    blob = data.get('blob', '').strip()
+
+    if not name or not blob:
+        return jsonify({'success': False, 'message': 'Name and encrypted blob are required'}), 400
+
     try:
         user_id = session['user_id']
-        master_key = session['master_key']
-        
-        # Cargar vault existente
-        vault_data = load_vault(master_key, user_id)
-        
-        # Agregar nueva entrada
-        vault_data[name] = {
-            'user': user,
-            'password': password,
-            'description': description
-        }
-        
-        # Guardar vault
-        save_vault(vault_data, master_key, user_id)
-        
-        return jsonify({'success': True, 'message': 'Contraseña agregada exitosamente'})
+        store_encrypted_entry(name, blob, user_id)
+        return jsonify({'success': True, 'message': 'Encrypted entry stored successfully'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -164,23 +147,10 @@ def api_get_password(name):
     
     try:
         user_id = session['user_id']
-        master_key = session['master_key']
-        
-        vault_data = load_vault(master_key, user_id)
-        
-        if name not in vault_data:
-            return jsonify({'success': False, 'message': 'Contraseña no encontrada'}), 404
-        
-        password_data = vault_data[name]
-        return jsonify({
-            'success': True,
-            'data': {
-                'name': name,
-                'user': password_data.get('user', ''),
-                'password': password_data.get('password', ''),
-                'description': password_data.get('description', '')
-            }
-        })
+        blob = get_encrypted_entry(name, user_id)
+        if blob is None:
+            return jsonify({'success': False, 'message': 'Entry not found'}), 404
+        return jsonify({'success': True, 'data': {'name': name, 'blob': blob}})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -192,20 +162,11 @@ def api_delete_password(name):
     
     try:
         user_id = session['user_id']
-        master_key = session['master_key']
-        
-        vault_data = load_vault(master_key, user_id)
-        
-        if name not in vault_data:
-            return jsonify({'success': False, 'message': 'Contraseña no encontrada'}), 404
-        
-        # Eliminar entrada
-        del vault_data[name]
-        
-        # Guardar vault
-        save_vault(vault_data, master_key, user_id)
-        
-        return jsonify({'success': True, 'message': 'Contraseña eliminada exitosamente'})
+        blob = get_encrypted_entry(name, user_id)
+        if blob is None:
+            return jsonify({'success': False, 'message': 'Entry not found'}), 404
+        delete_encrypted_entry(name, user_id)
+        return jsonify({'success': True, 'message': 'Entry deleted'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 

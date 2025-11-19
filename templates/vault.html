@@ -91,6 +91,8 @@
     <!-- Área de mensajes -->
     <div id="message-area"></div>
     
+    <!-- Exponer user_id al cliente como meta para evitar errores del analizador JS en el editor -->
+    <meta name="current-user-id" content="{{ session.get('user_id') | tojson }}">
     <script src="{{ url_for('static', filename='js/vault.js') }}"></script>
 </body>
 </html>
