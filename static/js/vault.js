@@ -210,7 +210,7 @@ function togglePasswordVisibility() {
     
     if (passwordField.type === 'password') {
         passwordField.type = 'text';
-        toggleBtn.textContent = '🙈';
+        toggleBtn.textContent = '👁️';
     } else {
         passwordField.type = 'password';
         toggleBtn.textContent = '👁️';

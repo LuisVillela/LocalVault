@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 # ============================================================
-# 🟢 DB_PATH AUTOMÁTICO (local vs Render)
+# DB_PATH AUTOMÁTICO (local vs Render)
 # ============================================================
 
 # Si tú defines DB_PATH en local, lo usará.
@@ -29,7 +29,7 @@ class DatabaseManager:
         self._initialize_tables()
 
     # ============================================================
-    # 🟣 CREACIÓN DE TABLAS
+    # CREACIÓN DE TABLAS
     # ============================================================
     def _initialize_tables(self):
         """Crea las tablas si no existen"""
@@ -46,9 +46,7 @@ class DatabaseManager:
         """)
         self.connection.commit()
 
-    # ============================================================
-    # 🔐 AUTENTICACIÓN
-    # ============================================================
+    # AUTENTICACIÓN
     def authenticate_user(self, correo: str, password: str) -> Optional[Dict[str, Any]]:
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM usuarios WHERE correo = ?", (correo,))
@@ -58,9 +56,7 @@ class DatabaseManager:
             return dict(user)
         return None
 
-    # ============================================================
     # 🆕 REGISTRO DE USUARIO
-    # ============================================================
     def register_user(self, nombre: str, correo: str, password: str, fecha_nacimiento: str) -> bool:
         cursor = self.connection.cursor()
 
@@ -79,18 +75,14 @@ class DatabaseManager:
         self.connection.commit()
         return True
 
-    # ============================================================
     # 🔍 CONSULTA DE USUARIO
-    # ============================================================
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM usuarios WHERE id = ?", (user_id,))
         user = cursor.fetchone()
         return dict(user) if user else None
 
-    # ============================================================
     # 🔑 PASSWORD HASHING
-    # ============================================================
     def _hash_password(self, password: str) -> str:
         password_bytes = password.encode('utf-8')
         salt = bcrypt.gensalt()
@@ -100,9 +92,7 @@ class DatabaseManager:
     def _verify_password(self, password: str, hashed: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-    # ============================================================
     # 🔐 MASTER KEY
-    # ============================================================
     def generate_master_key_for_user(self, user_id: int, user_password: str) -> str:
         """Genera una clave maestra única para cifrado"""
         unique_string = f"{user_id}_{user_password}_localvault"
